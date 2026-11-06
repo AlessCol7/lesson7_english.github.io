@@ -1,0 +1,981 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Verb Blocks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Press+Start+2P&display=swap">
+<style>
+:root{
+  /* Layout: sticky arcade HUD (score, lines, 10-cell row), level tabs, each level is a stack of mini-games that fill the page, teacher drawer on demand. */
+  --bg:#0b1020; --grid:#10173a; --panel:#141b34; --panel2:#1c2648; --ink:#eef2ff; --mute:#a3afd6; --line:#2b3764;
+  --c1:#29d3e8; --c2:#ffd23f; --c3:#b36bff; --good:#4ddc7a; --bad:#ff5a5f; --warn:#ff9a3d; --blue:#4d7cff;
+  --dark:#0b1020;
+  --display:'Press Start 2P','Courier New',monospace; --body:'Nunito',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{
+  margin:0; color:var(--ink); font:400 17px/1.55 var(--body); background:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 56px;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+.wrap{max-width:940px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.5;text-wrap:balance;margin:0}
+h2{font-size:14px;color:var(--c2)}
+h3{font-size:11px;color:var(--c1)}
+p{margin:10px 0}
+a{color:var(--c1)}
+button{font:inherit;color:inherit}
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:2px solid var(--line);padding:10px 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.logo{display:flex;align-items:center;gap:10px;font:400 12px var(--display);letter-spacing:.04em}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat span{font:400 8px var(--display);color:var(--mute)}
+.stat b{font:400 14px var(--display);color:var(--c2);font-variant-numeric:tabular-nums}
+.row10{display:flex;gap:2px}
+.row10 i{width:14px;height:14px;background:#101733;border:1px solid var(--line)}
+.row10 i.f{border-color:transparent;box-shadow:inset 2px 2px 0 rgba(255,255,255,.35),inset -2px -2px 0 rgba(0,0,0,.25)}
+.f0{background:var(--c1)!important}.f1{background:var(--c2)!important}.f2{background:var(--c3)!important}.f3{background:var(--good)!important}.f4{background:var(--bad)!important}.f5{background:var(--blue)!important}.f6{background:var(--warn)!important}
+.row10.flash{animation:flash .6s steps(2) 2}
+@keyframes flash{50%{opacity:.2}}
+.tbtn{margin-left:auto;background:transparent;border:2px dashed var(--c3);color:var(--c3);padding:8px 12px;border-radius:4px;font:400 9px var(--display);cursor:pointer;min-height:40px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:12px 0 6px}
+.tab{flex:0 0 auto;background:var(--panel);border:2px solid var(--line);border-radius:4px;color:var(--mute);padding:10px 12px;font:400 9px var(--display);cursor:pointer;min-height:44px;line-height:1.4}
+.tab[aria-current="true"]{background:var(--c2);border-color:var(--c2);color:#1a1400}
+.tab[disabled]{opacity:.4;cursor:not-allowed}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:20px;margin:12px 0;min-width:0}
+.mino{display:inline-grid;grid-template-columns:repeat(var(--cols),var(--u));gap:2px;vertical-align:middle}
+.mino i{width:var(--u);height:var(--u)}
+.mino i.on{background:var(--mc);box-shadow:inset 2px 2px 0 rgba(255,255,255,.35),inset -2px -2px 0 rgba(0,0,0,.25)}
+.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.btn{background:var(--c2);color:#1a1400;border:0;border-radius:4px;padding:14px 18px;font:400 11px var(--display);cursor:pointer;min-height:46px;box-shadow:0 4px 0 #a58400}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #a58400}
+.btn.alt{background:var(--panel2);color:var(--ink);box-shadow:0 4px 0 #0e1430;border:2px solid var(--line)}
+.btn.sm{padding:10px 12px;font-size:9px;min-height:40px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;align-items:center}
+:focus-visible{outline:3px solid var(--c2);outline-offset:2px}
+.inp,.ta,select.inp{font:700 20px var(--body);background:#0d1430;color:var(--ink);border:2px solid var(--line);border-radius:4px;padding:10px 12px;width:100%;min-width:0}
+.inp{max-width:240px}
+select.inp{max-width:100%;font-size:17px}
+.ta{font-weight:600;font-size:18px;min-height:120px;resize:vertical;line-height:1.5}
+.inp.good{border-color:var(--good);color:var(--good)}
+.inp.bad{border-color:var(--bad)}
+.inl{display:inline-block;width:11ch;max-width:100%;padding:4px 8px;font-size:20px;vertical-align:baseline}
+.msg{border-radius:4px;padding:10px 14px;margin:12px 0 0;font-weight:600;border-left:6px solid var(--c1);background:var(--panel2)}
+.msg.ok{border-color:var(--good)}.msg.no{border-color:var(--bad)}.msg.info{border-color:var(--c1)}
+.prog{color:var(--mute);font-size:14px;margin:6px 0 14px}
+.rt{font:400 10px var(--display);color:var(--c1);margin-bottom:6px}
+.blk{--bc:var(--c1);background:var(--bc);color:var(--dark);padding:12px 14px;border-radius:2px;box-shadow:inset 4px 4px 0 rgba(255,255,255,.35),inset -4px -4px 0 rgba(0,0,0,.25);min-width:0}
+.blk small{display:block;font:400 8px var(--display);opacity:.8;margin-bottom:6px}
+.blk b{font:800 24px var(--body);overflow-wrap:anywhere}
+.b1{--bc:var(--c1)}.b2{--bc:var(--c2)}.b3{--bc:var(--c3)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--panel2);border:2px solid var(--line);border-radius:4px;padding:8px 14px;font-weight:800;cursor:pointer;min-height:40px}
+.chip[aria-pressed="true"]{border-color:var(--c2);color:var(--c2)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:12px}
+.mini{background:var(--panel2);border-left:6px solid var(--bc,var(--line));border-radius:4px;padding:12px 14px;min-width:0}
+.mini h3{margin-bottom:8px}
+.mini p{margin:6px 0}
+.gridcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin:12px 0}
+.gridcards .card{margin:0}
+.fld label{display:block;font-weight:800;margin-bottom:6px}
+.tag{font:400 8px var(--display);padding:4px 6px;border-radius:2px;color:var(--dark);margin-right:6px}
+.t1{background:var(--c1)}.t2{background:var(--c2)}.t3{background:var(--c3)}
+.hint{min-height:30px;margin-top:6px}
+.lt{display:inline-block;min-width:1ch;font:800 24px var(--body)}
+.lt.ok{color:var(--good)}.lt.no{color:var(--bad);text-decoration:underline}.lt.gap{color:var(--mute)}
+mark{border-radius:3px;padding:0 4px;color:#1a1400;font-weight:800}
+mark.hl1{background:var(--c1)}mark.hl2{background:var(--c2)}mark.hl3{background:var(--c3)}
+.sent{font-size:21px;line-height:1.9;margin:6px 0 10px}
+.sent mark.clue{background:none;color:inherit;padding:0}
+.sent.showclue mark.clue{background:var(--c2);color:#1a1400;padding:0 4px}
+.shapes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.sbtn{border:0;border-radius:2px;padding:14px;text-align:left;cursor:pointer;color:var(--dark);font:800 17px var(--body);min-height:64px;box-shadow:inset 4px 4px 0 rgba(255,255,255,.35),inset -4px -4px 0 rgba(0,0,0,.25)}
+.sbtn span{display:block;font:600 14px var(--body)}
+.sbtn.s1{background:var(--c1)}.sbtn.s2{background:var(--c2)}.sbtn.s3{background:var(--c3)}
+.sbtn[disabled]{opacity:.5;cursor:default}
+.mshapes{display:flex;gap:8px;flex-wrap:wrap}
+.mshapes .sbtn{min-height:44px;padding:8px 14px;font-size:15px}
+.q{font-weight:800;margin:6px 0 10px}
+.well{position:relative;height:300px;border:2px solid var(--line);background-color:#0a0f24;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:30px 30px;overflow:hidden;border-radius:4px}
+.piece{position:absolute;transform:translateX(-50%);text-align:center;padding:8px 14px}
+.piece b{font-size:22px}
+.piece.pop{animation:pop .3s forwards}
+@keyframes pop{to{opacity:0;transform:translateX(-50%) scale(1.4)}}
+.piece.shake{animation:shake .25s}
+@keyframes shake{25%{margin-left:-8px}75%{margin-left:8px}}
+.shk{animation:shk .25s}
+@keyframes shk{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.lives{font:400 12px var(--display);color:var(--bad);letter-spacing:.1em}
+.dz-btns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.slot{min-height:84px;border:2px dashed var(--line);border-radius:3px;padding:8px;font:400 8px var(--display);color:var(--mute)}
+.slot .blk{margin-top:6px;padding:8px 10px}
+.slot .blk b{font-size:20px}
+.tray{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.tb{background:var(--panel2);border:2px solid var(--line);border-radius:3px;padding:12px 18px;font:800 22px var(--body);cursor:pointer;color:var(--ink);min-height:52px}
+.tb[disabled]{opacity:.3;cursor:default}
+.tok{background:none;border:0;border-bottom:2px dashed var(--line);padding:2px 3px;margin:0 1px;font:600 21px var(--body);cursor:pointer;color:var(--ink);border-radius:2px}
+.tok.clue{background:var(--c2);color:#1a1400;border-color:transparent}
+.tok.bad{background:var(--bad);color:var(--dark);border-color:transparent}
+.bins{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:10px}
+.bin{background:var(--panel2);border:3px solid var(--bc);border-radius:4px;padding:10px;min-height:130px;cursor:pointer;text-align:left;color:var(--ink);display:block;width:100%}
+.bin h3{color:var(--bc);margin-bottom:8px}
+.bin .got{display:flex;flex-wrap:wrap;gap:6px}
+.bin .got span{background:var(--bc);color:var(--dark);font-weight:800;padding:2px 8px;border-radius:2px}
+.pool{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;min-height:48px}
+.words{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.wc{background:var(--panel2);border-radius:4px;padding:14px;min-width:0}
+.wc .wd{font:800 22px var(--body);color:var(--c1)}
+.wc .ta{min-height:80px;font-size:16px;margin-top:8px}
+.lights{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:6px}
+.lights li{display:flex;gap:10px;align-items:center;font-weight:600}
+.lights i{width:16px;height:16px;border-radius:2px;background:#101733;border:2px solid var(--line);flex:0 0 auto}
+.lights li.ok i{background:var(--good);border-color:var(--good)}
+.ladder{display:grid;gap:6px;margin:12px 0}
+.rung{padding:8px 12px;border-radius:2px;font-weight:600;background:var(--panel2);border-left:6px solid var(--bad)}
+.rung:nth-child(2){margin-left:18px;border-color:var(--warn)}
+.rung:nth-child(3){margin-left:36px;border-color:var(--good)}
+.opts{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.opt{background:var(--panel2);border:2px solid var(--line);border-radius:4px;padding:8px 14px;font-weight:700;cursor:pointer;min-height:42px}
+.opt.sel{border-color:var(--c2);color:var(--c2)}
+.opt.right{border-color:var(--good);color:var(--good)}
+.opt.wrong{border-color:var(--bad);color:var(--bad)}
+.qitem{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.qrow{border-top:1px solid var(--line);padding:12px 0}
+.qrow.first{border-top:0}
+.gapped select.inp{display:inline-block;width:auto;padding:4px 8px;font-size:16px}
+.sl{background:#0d1430;border:1px solid var(--line);border-radius:4px;padding:10px 14px}
+.story{font-size:19px;line-height:2.1}
+.pics{display:flex;gap:12px;flex-wrap:wrap}
+.pic{flex:1;min-width:140px;font-size:60px;text-align:center;background:var(--panel2);border-radius:6px;padding:18px 10px;line-height:1.2}
+.pic small{display:block;font:400 8px var(--display);color:var(--mute);margin-top:8px}
+.timer{font:400 26px var(--display);color:var(--c2);font-variant-numeric:tabular-nums}
+.rate{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.rate label{display:block;font-weight:800;margin-bottom:4px}
+.rate select{width:100%;font:700 17px var(--body);background:#0d1430;color:var(--ink);border:2px solid var(--line);border-radius:4px;padding:8px}
+.links{display:grid;gap:10px;margin-top:10px}
+.links a{display:block;background:var(--panel2);border:2px solid var(--line);border-left:6px solid var(--c1);border-radius:4px;padding:12px 14px;text-decoration:none;color:var(--ink);font-weight:800}
+.links a span{display:block;font-weight:400;color:var(--mute);font-size:15px}
+.fall{position:absolute;top:-60px;animation:drop 6s linear infinite;opacity:.9}
+@keyframes drop{to{transform:translateY(520px)}}
+.hero{position:relative;overflow:hidden}
+.hero>*:not(.fall){position:relative;z-index:1}
+.teacher{border:2px dashed var(--c3);border-radius:6px;background:var(--panel);padding:18px;margin:12px 0}
+.teacher h3{color:var(--c3);margin:16px 0 6px}
+.teacher h3:first-child{margin-top:0}
+.teacher ul{margin:6px 0;padding-left:20px}
+.rep{width:100%;min-height:240px;background:#0d1430;color:var(--ink);border:2px solid var(--line);border-radius:4px;padding:10px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.stars{font-size:34px;color:var(--c2);letter-spacing:.2em}
+.big{font:400 20px/1.6 var(--display);text-wrap:balance}
+.note{color:var(--mute);font-size:14px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--good);color:var(--dark);font:400 11px var(--display);padding:12px 16px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100vw - 32px);text-align:center}
+#toast.show{opacity:1}
+#toast.info{background:var(--c1)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="hud">
+    <div class="logo" id="logo"></div>
+    <div class="stat"><span>SCORE</span><b id="score">0</b></div>
+    <div class="stat"><span>LINES</span><b id="lines">0</b></div>
+    <div class="row10" id="row" aria-label="Progress to the next line"></div>
+    <button class="tbtn" id="tbtn" aria-expanded="false">TEACHER</button>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Levels"></nav>
+  <div id="tpanel" hidden></div>
+  <main id="stage"></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+/* ============ EDIT HERE: the verbs of this lesson ============ */
+var VERBS={
+  reg:[["walk","walked","walked"],["love","loved","loved"],["stop","stopped","stopped"],["study","studied","studied"],["play","played","played"],["plan","planned","planned"]],
+  irr:[["go","went","gone"],["eat","ate","eaten"],["grow","grew","grown"],["write","wrote","written"],["buy","bought","bought"],["take","took","taken"],["see","saw","seen"],["drink","drank","drunk"],["swim","swam","swum"],["understand","understood","understood"]]
+};
+var RULES={
+  walk:"Most verbs: just add -ed.",
+  love:"The verb already ends in -e, so add only -d.",
+  stop:"One vowel + one consonant at the end of a short word: double the last letter, then add -ed.",
+  study:"Consonant + y: change the y to i, then add -ed.",
+  play:"Vowel + y: keep the y and add -ed.",
+  plan:"One vowel + one consonant at the end of a short word: double the last letter, then add -ed."
+};
+var EX={
+  walk:["I walked to school yesterday.","We have walked ten kilometres."],
+  love:["She loved the new game.","I have loved this song for years."],
+  stop:["The bus stopped at the corner.","They have stopped the music."],
+  study:["He studied for the test last night.","She has studied English for three years."],
+  play:["We played Minecraft after school.","I have played this level twice."],
+  plan:["Mia planned a surprise party.","We have planned the trip."],
+  go:["We went to the lake last Sunday.","She has gone to the shop."],
+  eat:["I ate a big pizza yesterday.","Have you eaten yet?"],
+  grow:["The tree grew very fast.","My brother has grown a lot this year."],
+  write:["He wrote a long story.","I have written three pages."],
+  buy:["She bought a new phone last week.","We have bought the tickets."],
+  take:["I took my bag to school.","Who has taken my pencil?"],
+  see:["We saw a big dog in the park.","I have seen that movie twice."],
+  drink:["He drank all the juice.","I have drunk two glasses of water."],
+  swim:["They swam in the sea in July.","She has swum twenty laps today."],
+  understand:["I understood the lesson.","Have you understood the rule?"]
+};
+var ITEMS=[
+  {pre:"Last Saturday I",post:"Minecraft with my cousin.",v:"play",ans:"played",s:2,clue:"Last Saturday"},
+  {pre:"She has already",post:"her story.",v:"write",ans:"written",s:3,clue:"has already"},
+  {pre:"Can you",post:"me with this level?",v:"help",ans:"help",s:1,clue:"Can you"},
+  {pre:"We",post:"to the water park two days ago.",v:"go",ans:"went",s:2,clue:"two days ago"},
+  {pre:"I have never",post:"sushi.",v:"eat",ans:"eaten",s:3,clue:"have never"},
+  {pre:"He",post:"English for an hour yesterday.",v:"study",ans:"studied",s:2,clue:"yesterday"},
+  {pre:"They have",post:"three matches this month.",v:"win",ans:"won",s:3,clue:"have"},
+  {pre:"My brother",post:"his phone last week.",v:"break",ans:"broke",s:2,clue:"last week"},
+  {pre:"Did you",post:"the new movie?",v:"see",ans:"see",s:1,clue:"Did you"},
+  {pre:"I have not",post:"my homework yet.",v:"do",ans:"done",s:3,clue:"have not"},
+  {pre:"Mia",post:"her laptop to the club yesterday.",v:"bring",ans:"brought",s:2,clue:"yesterday"},
+  {pre:"Oh no! I have",post:"my password.",v:"forget",ans:"forgotten",s:3,clue:"have"},
+  {pre:"We have",post:"the game for a break.",v:"stop",ans:"stopped",s:3,clue:"have"}
+];
+var CH=[
+  {t:"We ate pizza yesterday.",verb:"ate",clue:["yesterday"],s:2},
+  {t:"She has gone to the shop.",verb:"gone",clue:["has"],s:3},
+  {t:"Did you see my message?",verb:"see",clue:["Did"],s:1},
+  {t:"I have never eaten sushi.",verb:"eaten",clue:["have","never"],s:3},
+  {t:"They swam in the sea two days ago.",verb:"swam",clue:["ago"],s:2},
+  {t:"He has written a long story.",verb:"written",clue:["has"],s:3}
+];
+var SP=[
+  {t:"Yesterday we goed to the park.",bad:"goed",ans:"went"},
+  {t:"She has wrote three pages.",bad:"wrote",ans:"written"},
+  {t:"I eated pizza last night.",bad:"eated",ans:"ate"},
+  {t:"They have went home.",bad:"went",ans:"gone"},
+  {t:"He buyed a new game.",bad:"buyed",ans:"bought"}
+];
+var STORY=[
+  ["Last Saturday, Mia ","go","went"," to the lake with her brother. They ","take","took"," a small boat and ","swim","swam"," near the shore. Mia ","see","saw"," a huge fish. \"I have never ","see","seen"," a fish like this!\" she said. Her brother ","eat","ate"," a sandwich and ","drink","drank"," some juice. In the evening, they ","write","wrote"," a story about their day. \"This is the best day I have ever ","have","had","!\" said Mia."]
+];
+var DROP=[["go","went","gone"],["eat","ate","eaten"],["grow","grew","grown"],["write","wrote","written"],["take","took","taken"],["see","saw","seen"],["drink","drank","drunk"],["swim","swam","swum"],["begin","began","begun"],["break","broke","broken"],["choose","chose","chosen"],["drive","drove","driven"],["fly","flew","flown"],["give","gave","given"],["ride","rode","ridden"],["sing","sang","sung"],["speak","spoke","spoken"],["wear","wore","worn"]];
+var FACT=[
+  ["About you","curious","wants to know new things","I am curious about space."],["About you","shy","quiet with new people","I am shy in big groups."],["About you","brave","not afraid","He was brave on the roller coaster."],["About you","kind","nice to other people","My cousin is kind."],
+  ["A past event","amazing","very, very good","The show was amazing."],["A past event","boring","not interesting","The film was boring."],["A past event","scary","makes you afraid","The ride was scary."],["A past event","crowded","too many people in one place","The beach was crowded."],
+  ["Feelings","proud","happy about something you did","I felt proud of my score."],["Feelings","nervous","a bit afraid before something","I was nervous before the test."],["Feelings","disappointed","sad because it was not good","I was disappointed with the ending."],["Feelings","surprised","you did not expect it","She was surprised by the gift."]
+];
+var EXTRA_DESC=['great','good','fun','nice','happy','cool','awesome','interesting','delicious','sad','hungry','friendly','funny','smart','lazy','quiet','loud','beautiful','excited','scared','bored','worried','busy','creative','patient','hilarious','exciting','relaxed','tired'];
+var TICKETS=[
+  {title:"TICKET 1: GETTING AROUND",a:["\u{1F6B2}\u{1F327}️","A boy rides a bike in the rain"],b:["\u{1F68C}☀️","A boy takes the bus on a sunny day"],
+   tasks:["Describe the two pictures. What can you see? What are the people doing?","Does the weather change how people travel? Say what you think and why.","Tell me about the last time you went somewhere. How did you travel? What happened?"]},
+  {title:"TICKET 2: FREE TIME",a:["\u{1F3AE}\u{1F3E0}","A boy plays a video game at home"],b:["⚽\u{1F333}","Children play football in a park"],
+   tasks:["Describe the two pictures. What are the people doing? How do they feel?","Is it better to play inside or outside? Give two reasons.","Tell me about a game you played last week. What happened?"]},
+  {title:"TICKET 3: SCHOOL AND HOLIDAYS",a:["\u{1F4DA}✏️","Students work in a classroom"],b:["\u{1F3D6}️\u{1F366}","A family relaxes on a beach"],
+   tasks:["Describe the two pictures. What is the same? What is different?","Which do you prefer, school days or holidays? Why?","Describe your best day last week. What did you do? Why was it great?"]}
+];
+var LSCRIPT="Last weekend was great. On Saturday I got up early because we went to the lake with my uncle. We left home at nine o'clock and the trip took forty minutes. First we rented a small boat. My cousin Anna wanted to swim, but the water was cold, so she only put her feet in. At half past twelve we ate sandwiches and drank orange juice. In the afternoon I saw a huge bird, and I took ten photos of it. We went home at six. I was tired, but I felt really happy.";
+var LMC=[
+  ["When did they leave home?",["At eight o'clock","At nine o'clock","At ten o'clock"],1],
+  ["How long was the trip?",["Fourteen minutes","Forty minutes","Four hours"],1],
+  ["Why did Anna not swim?",["She was tired","The water was cold","She had no towel"],1],
+  ["What did they have for lunch?",["Sandwiches and orange juice","Pizza and lemonade","Fruit and milk"],0],
+  ["How many photos did the speaker take?",["Two","Ten","Twelve"],1]
+];
+var LGAP=[["We","ate","sandwiches and","drank","orange juice."],["In the afternoon I","saw","a huge bird."],["We","went","home at six."]];
+/* ================================================================ */
+
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var norm=function(s){return String(s).trim().toLowerCase().replace(/[‘’`]/g,"'").replace(/\s+/g,' ')};
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function shakeEl(el){el.classList.remove('shk');void el.offsetWidth;el.classList.add('shk')}
+var stage=$('#stage');
+
+var MINO={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[1,1,1],[0,1,0]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
+var MCOL={I:'var(--c1)',O:'var(--c2)',T:'var(--c3)',S:'var(--good)',Z:'var(--bad)',J:'var(--blue)',L:'var(--warn)'};
+function mino(t,u){u=u||12;var m=MINO[t],h='';m.forEach(function(r){r.forEach(function(v){h+='<i class="'+(v?'on':'')+'"></i>'})});
+  return '<span class="mino" style="--cols:'+m[0].length+';--u:'+u+'px;--mc:'+MCOL[t]+'" aria-hidden="true">'+h+'</span>'}
+$('#logo').innerHTML=mino('T',9)+'<span>VERB BLOCKS</span>';
+
+function fresh(){return {name:"",score:0,cells:0,lines:0,sent:{},boss:{},speak:{},listen:{},log:{spell:[],shape:[],mc:[],other:[]}}}
+var S=fresh();
+function save(){try{localStorage.setItem('verbblocks-v2',JSON.stringify(S))}catch(e){}}
+function load(){try{var d=JSON.parse(localStorage.getItem('verbblocks-v2')||'null');if(d&&d.log&&d.sent){S=d;S.speak=S.speak||{};S.listen=S.listen||{};S.boss=S.boss||{}}}catch(e){}}
+load();
+
+function hud(){
+  $('#score').textContent=S.score;$('#lines').textContent=S.lines;
+  var h='';for(var i=0;i<10;i++){h+='<i class="'+(i<S.cells?'f f'+(i%7):'')+'"></i>'}
+  $('#row').innerHTML=h;
+}
+var tt;
+function toast(m,t){var e=$('#toast');e.textContent=m;e.className='show '+(t||'');clearTimeout(tt);tt=setTimeout(function(){e.className=''},1700)}
+function win(p){
+  S.score+=p;S.cells++;
+  if(S.cells>=10){S.cells=0;S.lines++;S.score+=5;toast('LINE CLEARED! +5');var r=$('#row');r.classList.remove('flash');void r.offsetWidth;r.classList.add('flash')}
+  hud();save();
+}
+function msg(t,h){return '<div class="msg '+t+'">'+h+'</div>'}
+function letterHint(typed,target){
+  var h='',i;
+  for(i=0;i<target.length;i++){var c=typed[i];
+    if(c===undefined)h+='<span class="lt gap">_</span>';
+    else if(c===target[i])h+='<span class="lt ok">'+esc(c)+'</span>';
+    else h+='<span class="lt no">'+esc(c)+'</span>'}
+  for(i=target.length;i<typed.length;i++)h+='<span class="lt no">'+esc(typed[i])+'</span>';
+  return h;
+}
+function hlWord(s,w,cls){return s.replace(new RegExp('\\b'+w+'\\b','i'),function(m){return '<mark class="'+cls+'">'+m+'</mark>'})}
+function onEnter(el,fn){el.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();fn()}})}
+function noAssist(el){el.setAttribute('autocomplete','off');el.setAttribute('autocapitalize','off');el.setAttribute('autocorrect','off');el.setAttribute('spellcheck','false')}
+function shapeBtns(){return '<div class="mshapes"><button class="sbtn s1" data-n="1">SHAPE 1<span>base</span></button><button class="sbtn s2" data-n="2">SHAPE 2<span>past</span></button><button class="sbtn s3" data-n="3">SHAPE 3<span>have / has</span></button></div>'}
+function shapeHint(n){return n===1?'Shape 1 is the base verb (the dictionary form).':n===2?'Shape 2 is the past simple: the time is finished.':'Shape 3 is the form that goes after have or has.'}
+
+/* ---------- navigation ---------- */
+var raf=0,dropRun=false,keyH=null,timer=0,entered=false;
+var LV=[["1","SHAPES",L1],["2","BUILDER",L2],["3","CHOOSE+WRITE",L3],["4","DROP ZONE",L4],["5","DESCRIBE",L5],["6","BOSS",L6],["7","SPEAKING",L7],["8","LISTENING",L8],["9","RESULTS",L9]];
+var cur=0;
+function tabs(){
+  $('#tabs').innerHTML=LV.map(function(l,i){return '<button class="tab" data-i="'+i+'" '+(entered?'':'disabled ')+'aria-current="'+(entered&&i===cur)+'">LVL '+l[0]+'<br>'+l[1]+'</button>'}).join('');
+  $$('.tab').forEach(function(b){b.onclick=function(){go(+b.dataset.i)}});
+}
+function stopAll(){
+  cancelAnimationFrame(raf);dropRun=false;clearInterval(timer);timer=0;
+  if(keyH){document.removeEventListener('keydown',keyH);keyH=null}
+  try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch(e){}
+}
+function go(i){
+  if(!entered)return;
+  stopAll();cur=i;tabs();LV[i][2]();window.scrollTo(0,0);
+}
+function nextCard(label,i){return '<section class="card"><div class="row" style="margin:0"><button class="btn" data-go="'+i+'">'+label+'</button></div></section>'}
+function bindGo(){$$('[data-go]').forEach(function(b){b.onclick=function(){go(+b.dataset.go)}})}
+
+/* ---------- intro ---------- */
+function start(){
+  stopAll();entered=false;tabs();
+  var falls=[['T',6,'8%','0s'],['L',6,'24%','-2s'],['S',6,'62%','-4s'],['J',6,'80%','-1s'],['I',6,'46%','-3s']].map(function(f){return '<div class="fall" style="left:'+f[2]+';animation-delay:'+f[3]+'">'+mino(f[0],18)+'</div>'}).join('');
+  var back=S.score>0;
+  stage.innerHTML='<section class="card hero">'+falls+
+  '<div class="head">'+mino('I',16)+mino('O',16)+mino('T',16)+'</div>'+
+  '<h1 style="font-size:24px;margin:18px 0 8px;color:var(--c2)">VERB BLOCKS</h1>'+
+  '<p style="font-size:19px;max-width:34ch">Every verb is a stack of <b>3 blocks</b>. Stack them right, clear lines, beat the boss.</p>'+
+  '<div class="fld" style="margin:20px 0 6px"><label for="nm" style="font-family:var(--display);font-size:11px;color:var(--c1)">ENTER YOUR NAME, PLAYER 1</label><input id="nm" class="inp" value="'+esc(S.name||'')+'" maxlength="24" placeholder="Your name" style="margin-top:10px"></div>'+
+  '<div class="row"><button class="btn" id="go">'+(back?'CONTINUE':'START')+'</button></div></section>'+
+  '<section class="card"><h3>HOW TO PLAY</h3><div class="cols">'+
+  '<div class="mini" style="--bc:var(--c1)"><p><b>Write full sentences.</b> A subject, a verb and one more detail. No one-word answers.</p></div>'+
+  '<div class="mini" style="--bc:var(--c2)"><p><b>Spelling counts.</b> Every letter is a block. Green letters are right, red letters need a fix.</p></div>'+
+  '<div class="mini" style="--bc:var(--c3)"><p><b>Mistakes are fine.</b> You always get another try. Ten correct answers clear a line.</p></div></div></section>';
+  var nm=$('#nm');noAssist(nm);nm.setAttribute('autocapitalize','words');nm.focus();
+  function st(){S.name=nm.value.trim()||'Player';entered=true;save();toast('GAME ON, '+S.name.toUpperCase(),'info');go(0)}
+  $('#go').onclick=st;onEnter(nm,st);
+}
+
+/* ---------- LEVEL 1: interactive shapes (irregular only) ---------- */
+function L1(){
+  stage.innerHTML='<section class="card"><div class="head">'+mino('I',12)+'<h2>LEVEL 1: THE 3 SHAPES</h2></div>'+
+  '<p>You already know regular verbs: just add <b>-ed</b>. Today we hunt the <b>irregular rebels</b>. Play three quick games to wake up your brain.</p>'+
+  '<div class="cols"><div class="mini" style="--bc:var(--c1)"><h3>SHAPE 1</h3><p>The base verb. Now, every day, after <b>can</b>, <b>to</b>, <b>did you</b>.</p></div>'+
+  '<div class="mini" style="--bc:var(--c2)"><h3>SHAPE 2</h3><p>Past simple. The time is finished: <b>yesterday</b>, <b>last week</b>, <b>ago</b>.</p></div>'+
+  '<div class="mini" style="--bc:var(--c3)"><h3>SHAPE 3</h3><p>Travels with a helper: <b>have</b>, <b>has</b>, <b>had</b>.</p></div></div></section>'+
+  '<section class="card" id="g1"></section><section class="card" id="g2"></section><section class="card" id="g3"></section>'+nextCard('NEXT: BLOCK BUILDER',1);
+  game1();game2();game3();bindGo();
+}
+function game1(){
+  var BV=VERBS.irr.slice(0,6),k=0,box=$('#g1');
+  function draw(){
+    if(k>=BV.length){box.innerHTML='<h3>GAME 1: BUILD THE STACK</h3><p class="big" style="margin:12px 0">All '+BV.length+' stacks built!</p>';return}
+    var v=BV[k],placed=0;
+    box.innerHTML='<h3>GAME 1: BUILD THE STACK</h3><p class="prog">Stack '+(k+1)+' of '+BV.length+'. Tap the blocks in order: Shape 1, then Shape 2, then Shape 3.</p>'+
+    '<div class="slots">'+[1,2,3].map(function(n){return '<div class="slot" id="sl'+n+'">SHAPE '+n+'</div>'}).join('')+'</div>'+
+    '<div class="tray" id="tr">'+shuffle(v).map(function(w){return '<button class="tb">'+esc(w)+'</button>'}).join('')+'</div><div id="gf"></div>';
+    $$('#tr .tb').forEach(function(b){b.onclick=function(){
+      var need=v[placed];
+      if(b.textContent===need){
+        $('#sl'+(placed+1)).innerHTML='SHAPE '+(placed+1)+'<div class="blk b'+(placed+1)+'"><b>'+esc(need)+'</b></div>';
+        b.disabled=true;placed++;win(1);$('#gf').innerHTML='';
+        if(placed===3){var ex=EX[v[0]]||['',''];
+          $('#gf').innerHTML=msg('ok','Stack complete!<div class="sl" style="margin-top:8px"><p style="margin:4px 0">'+hlWord(esc(ex[0]),v[1],'hl2')+'</p><p style="margin:4px 0">'+hlWord(esc(ex[1]),v[2],'hl3')+'</p></div>')+'<div class="row"><button class="btn sm" id="nx">NEXT STACK</button></div>';
+          $('#nx').onclick=function(){k++;draw()}}
+      }else{
+        shakeEl(b);S.log.shape.push({item:'Build the stack ('+v[0]+'): tapped "'+b.textContent+'" for Shape '+(placed+1),chose:0,need:placed+1});save();
+        $('#gf').innerHTML=msg('no','Not that block. '+shapeHint(placed+1))}
+    }});
+  }
+  draw();
+}
+function game2(){
+  var box=$('#g2'),done=0;
+  box.innerHTML='<h3>GAME 2: CLUE HUNTER</h3><p class="note">Tap the clue word in each sentence. Then pick the shape of the <b>bold verb</b>. <span id="g2c">0 of '+CH.length+'</span></p><div id="chl"></div>';
+  $('#chl').innerHTML=CH.map(function(it,qi){
+    var toks=it.t.split(' ').map(function(w){var p=w.replace(/[.,!?]/g,'');
+      return p.toLowerCase()===it.verb?'<b class="vb">'+esc(w)+'</b>':'<button class="tok" data-w="'+esc(p)+'">'+esc(w)+'</button>'}).join(' ');
+    return '<div class="qrow'+(qi===0?' first':'')+'" data-q="'+qi+'"><div class="sent">'+toks+'</div><div class="st"></div><div class="fb"></div></div>'}).join('');
+  $$('#chl .qrow').forEach(function(row){
+    var it=CH[+row.dataset.q],found=false,tries=0;
+    $$('.tok',row).forEach(function(t){t.onclick=function(){
+      if(found)return;
+      if(it.clue.indexOf(t.dataset.w)>-1){found=true;$$('.tok',row).forEach(function(x){if(it.clue.indexOf(x.dataset.w)>-1)x.classList.add('clue')});
+        $('.fb',row).innerHTML='';$('.st',row).innerHTML='<p class="q">Clue found! Which shape is <b>'+esc(it.verb)+'</b>?</p>'+shapeBtns();
+        $$('.sbtn',row).forEach(function(b){b.onclick=function(){
+          var n=+b.dataset.n;
+          if(n===it.s){win(tries===0?2:1);$('.st',row).innerHTML='';$('.fb',row).innerHTML=msg('ok','Yes, Shape '+n+'. '+shapeHint(n));$$('.vb',row).forEach(function(v){v.outerHTML='<mark class="hl'+n+'">'+esc(v.textContent)+'</mark>'});done++;$('#g2c').textContent=done+' of '+CH.length}
+          else{tries++;S.log.shape.push({item:'Clue hunter: '+it.t,chose:n,need:it.s});save();shakeEl(b);$('.fb',row).innerHTML=msg('no',shapeHint(it.s))}}});
+      }else{shakeEl(t);t.classList.add('bad');setTimeout(function(){t.classList.remove('bad')},600);$('.fb',row).innerHTML=msg('info','That word is not the clue. Look for a time word or a helper word.')}
+    }});
+  });
+}
+function game3(){
+  var box=$('#g3'),forms=[],picked=null,left=0;
+  VERBS.irr.slice(0,4).forEach(function(v){forms.push([v[0],1],[v[1],2],[v[2],3])});
+  left=forms.length;
+  box.innerHTML='<h3>GAME 3: SHAPE SORTER</h3><p class="note">Tap a word, then tap the bin where it belongs. <span id="g3c">'+left+' left</span></p><div class="pool" id="pool"></div>'+
+  '<div class="bins">'+[[1,'SHAPE 1','base','--c1'],[2,'SHAPE 2','past','--c2'],[3,'SHAPE 3','have / has','--c3']].map(function(b){return '<button class="bin" data-n="'+b[0]+'" style="--bc:var('+b[3]+')"><h3>'+b[1]+' <span class="note">'+b[2]+'</span></h3><div class="got" id="bin'+b[0]+'"></div></button>'}).join('')+'</div><div id="g3f"></div>';
+  shuffle(forms).forEach(function(f){var b=document.createElement('button');b.className='tb';b.textContent=f[0];b.dataset.n=f[1];$('#pool').appendChild(b);
+    b.onclick=function(){$$('#pool .tb').forEach(function(x){x.style.borderColor=''});picked=b;b.style.borderColor='var(--c2)'}});
+  $$('.bin',box).forEach(function(bin){bin.onclick=function(){
+    if(!picked){$('#g3f').innerHTML=msg('info','Tap a word first.');return}
+    var n=+bin.dataset.n;
+    if(+picked.dataset.n===n){$('#bin'+n).insertAdjacentHTML('beforeend','<span>'+esc(picked.textContent)+'</span>');picked.remove();picked=null;left--;win(1);$('#g3c').textContent=left+' left';$('#g3f').innerHTML=left?'':msg('ok','Sorted! Now you can build the verbs yourself.')}
+    else{S.log.shape.push({item:'Shape sorter: "'+picked.textContent+'"',chose:n,need:+picked.dataset.n});save();shakeEl(picked);$('#g3f').innerHTML=msg('no','Not that bin. '+shapeHint(+picked.dataset.n))}
+  }});
+}
+
+/* ---------- LEVEL 2: builder grid ---------- */
+function L2(){
+  var cards=VERBS.reg.slice(0,4).map(function(v){return {v:v,t:'reg'}}).concat(VERBS.irr.map(function(v){return {v:v,t:'irr'}}));
+  var fin=0;
+  stage.innerHTML='<section class="card"><div class="head">'+mino('O',12)+'<h2>LEVEL 2: BLOCK BUILDER</h2></div>'+
+  '<p>Write <b>Shape 2</b> and <b>Shape 3</b> for every verb. Work in any order. <b>Green</b> letters are right, <b>red</b> letters need a fix. <span id="fn" class="note">0 of '+cards.length+' stacked</span></p></section>'+
+  '<h3 style="margin:18px 0 0">ROUND A: REGULAR WARM-UP (watch the spelling)</h3><div class="gridcards" id="ga"></div>'+
+  '<h3 style="margin:18px 0 0">ROUND B: IRREGULAR REBELS</h3><div class="gridcards" id="gb"></div>'+nextCard('NEXT: CHOOSE AND WRITE',2);
+  cards.forEach(function(c){
+    var box=document.createElement('div');box.className='card';
+    box.innerHTML='<div class="blk b1" style="margin-bottom:12px"><small>SHAPE 1</small><b>'+esc(c.v[0])+'</b></div>'+
+    '<div class="fld"><label><span class="tag t2">SHAPE 2</span>past simple</label><input class="inp f2" aria-label="Shape 2 of '+esc(c.v[0])+'"><div class="hint h2"></div></div>'+
+    '<div class="fld"><label><span class="tag t3">SHAPE 3</span>with have / has</label><input class="inp f3" aria-label="Shape 3 of '+esc(c.v[0])+'"><div class="hint h3"></div></div>'+
+    '<div class="vm"></div><div class="row" style="margin-top:10px"><button class="btn sm chk">CHECK</button></div>';
+    $(c.t==='reg'?'#ga':'#gb').appendChild(box);
+    var ok={2:false,3:false},att=0,over=false;
+    [2,3].forEach(function(n){noAssist($('.f'+n,box));onEnter($('.f'+n,box),check)});
+    $('.chk',box).onclick=check;
+    function check(){
+      if(over)return;var wrong=false,empty=false;
+      [2,3].forEach(function(n){
+        if(ok[n])return;var inp=$('.f'+n,box),typed=norm(inp.value),target=c.v[n-1];
+        if(!typed){empty=true;wrong=true;return}
+        if(typed===target){ok[n]=true;inp.readOnly=true;inp.classList.remove('bad');inp.classList.add('good');$('.h'+n,box).innerHTML='';win(att===0?2:1)}
+        else{wrong=true;inp.classList.add('bad');$('.h'+n,box).innerHTML=letterHint(typed,target)}
+      });
+      if(empty){$('.vm',box).innerHTML=msg('info','Type both words first.');return}
+      if(!wrong){finish(true);return}
+      att++;
+      if(att>=2){[2,3].forEach(function(n){if(!ok[n]){var typed=norm($('.f'+n,box).value);S.log.spell.push({v1:c.v[0],form:'Shape '+n,typed:typed,ans:c.v[n-1]});$('.f'+n,box).value=c.v[n-1];$('.f'+n,box).readOnly=true;$('.h'+n,box).innerHTML=''}});save();finish(false)}
+      else{$('.vm',box).innerHTML=msg('no','Almost! Fix the red letters.'+(c.t==='reg'?' Rule: '+esc(RULES[c.v[0]]||''):''))}
+    }
+    function finish(clean){
+      over=true;fin++;$('#fn').textContent=fin+' of '+cards.length+' stacked';
+      var ex=EX[c.v[0]]||['',''];$('.chk',box).remove();
+      $('.vm',box).innerHTML=msg(clean?'ok':'info',(clean?'Nice stack!':'Right shapes shown.')+'<div class="sl" style="margin-top:8px"><p style="margin:4px 0">'+hlWord(esc(ex[0]),c.v[1],'hl2')+'</p><p style="margin:4px 0">'+hlWord(esc(ex[1]),c.v[2],'hl3')+'</p></div>');
+    }
+  });
+  bindGo();
+}
+
+/* ---------- LEVEL 3: three exercises ---------- */
+function markClue(t,c){var k=esc(c);var p=t.indexOf(k);return p<0?t:t.slice(0,p)+'<mark class="clue">'+k+'</mark>'+t.slice(p+k.length)}
+function L3(){
+  stage.innerHTML='<section class="card"><div class="head">'+mino('L',12)+'<h2>LEVEL 3: CHOOSE AND WRITE</h2></div>'+
+  '<p>Three exercises. First you <b>choose the shape</b>, then you <b>write the verb</b> yourself. Work in any order.</p></section>'+
+  '<section class="card" id="pa"><h3>EXERCISE A: PICK THE SHAPE, WRITE THE VERB</h3><p class="note" id="ac">0 of '+ITEMS.length+' done</p><div id="al"></div></section>'+
+  '<section class="card" id="pb"><h3>EXERCISE B: SPOT THE MISTAKE</h3><p class="note">Each sentence has one wrong verb. Tap it, then write the correct word. <span id="bc">0 of '+SP.length+' fixed</span></p><div id="bl"></div></section>'+
+  '<section class="card" id="pc"><h3>EXERCISE C: STORY TIME</h3><p class="note">Write the verb in the right shape. Read the whole sentence first!</p><div class="story sl" id="stx"></div><div id="sf"></div><div class="row"><button class="btn" id="sck">CHECK STORY</button></div></section>'+
+  nextCard('NEXT: DROP ZONE',3);
+  exA();exB();exC();bindGo();
+}
+function exA(){
+  var done=0;
+  $('#al').innerHTML=ITEMS.map(function(it,i){return '<div class="qrow'+(i===0?' first':'')+'" data-i="'+i+'"><p class="sent"></p><div class="step"></div><div class="fb"></div></div>'}).join('');
+  $$('#al .qrow').forEach(function(row){
+    var it=ITEMS[+row.dataset.i],tries=0,att=0,sent=$('.sent',row);
+    function sentence(mid){return markClue(esc(it.pre),it.clue)+' '+mid+' '+markClue(esc(it.post),it.clue)}
+    sent.innerHTML=sentence('<b>_____</b> <em>('+esc(it.v)+')</em>');
+    $('.step',row).innerHTML='<p class="q">Which shape does the gap need?</p>'+shapeBtns();
+    $$('.sbtn',row).forEach(function(b){b.onclick=function(){pick(+b.dataset.n)}});
+    function pick(n){
+      if(n===it.s){if(tries===0)win(1);$('.fb',row).innerHTML='';step2()}
+      else{tries++;S.log.shape.push({item:it.pre+' ___ '+it.post,chose:n,need:it.s});save();sent.classList.add('showclue');$('.fb',row).innerHTML=msg('no','Not this one. Look at the <b>yellow words</b>. They are the clue.')}
+    }
+    function step2(){
+      sent.innerHTML=sentence('<input class="inp inl ans" aria-label="Your answer"> <em>('+esc(it.v)+')</em>');sent.classList.add('showclue');
+      $('.step',row).innerHTML='<p class="q">Now write the verb in Shape '+it.s+'.</p><div class="hint hh"></div><div class="row" style="margin-top:4px"><button class="btn sm chk">CHECK</button></div>';
+      var a=$('.ans',row);noAssist(a);a.focus();onEnter(a,check);$('.chk',row).onclick=check;
+    }
+    function check(){
+      var a=$('.ans',row),typed=norm(a.value);if(!typed){$('.fb',row).innerHTML=msg('info','Type the verb first.');return}
+      if(typed===it.ans){if(att===0)win(2);else win(1);fin(true)}
+      else{att++;if(att>=2){S.log.spell.push({v1:it.v,form:'Shape '+it.s,typed:typed,ans:it.ans});save();fin(false)}
+        else{$('.hh',row).innerHTML=letterHint(typed,it.ans);$('.fb',row).innerHTML=msg('no','Close! Green letters are right. Fix the red ones.')}}
+    }
+    function fin(ok){
+      sent.innerHTML=sentence('<mark class="hl'+it.s+'">'+esc(it.ans)+'</mark>');$('.step',row).innerHTML='';
+      $('.fb',row).innerHTML=msg(ok?'ok':'info',(ok?'Correct! ':'The right word is shown. ')+'This is <b>Shape '+it.s+'</b>.');
+      done++;$('#ac').textContent=done+' of '+ITEMS.length+' done';
+    }
+  });
+}
+function exB(){
+  var fixed=0;
+  $('#bl').innerHTML=SP.map(function(it,i){
+    var toks=it.t.split(' ').map(function(w){return '<button class="tok" data-w="'+esc(w.replace(/[.,!?]/g,'').toLowerCase())+'">'+esc(w)+'</button>'}).join(' ');
+    return '<div class="qrow'+(i===0?' first':'')+'" data-i="'+i+'"><div class="sent">'+toks+'</div><div class="step"></div><div class="fb"></div></div>'}).join('');
+  $$('#bl .qrow').forEach(function(row){
+    var it=SP[+row.dataset.i],found=false,att=0;
+    $$('.tok',row).forEach(function(t){t.onclick=function(){
+      if(found)return;
+      if(t.dataset.w===it.bad){found=true;t.classList.add('bad');$('.fb',row).innerHTML='';
+        $('.step',row).innerHTML='<p class="q">Found it! Write the correct word for <b>'+esc(it.bad)+'</b>.</p><div class="hint hh"></div><input class="inp ans" aria-label="Correct word"> <button class="btn sm chk">CHECK</button>';
+        var a=$('.ans',row);noAssist(a);a.focus();onEnter(a,check);$('.chk',row).onclick=check;
+      }else{shakeEl(t);$('.fb',row).innerHTML=msg('info','That word is fine. Look for the verb that is not English.')}
+    }});
+    function check(){
+      var a=$('.ans',row),typed=norm(a.value);if(!typed)return;
+      if(typed===it.ans){win(att===0?2:1);end(true)}
+      else{att++;if(att>=2){S.log.spell.push({v1:it.bad,form:'spot the mistake',typed:typed,ans:it.ans});save();end(false)}else{$('.hh',row).innerHTML=letterHint(typed,it.ans)}}
+    }
+    function end(ok){
+      var fixedS=it.t.replace(it.bad,'<mark class="hl2">'+esc(it.ans)+'</mark>');
+      $('.sent',row).innerHTML=fixedS;$('.step',row).innerHTML='';$('.fb',row).innerHTML=msg(ok?'ok':'info',ok?'Fixed!':'The correct word is shown.');
+      fixed++;$('#bc').textContent=fixed+' of '+SP.length+' fixed';
+    }
+  });
+}
+function exC(){
+  var s=STORY[0],h='',gi=0,gaps=[];
+  for(var i=0;i<s.length;i++){
+    var seg=s[i];
+    if(i%3===0&&i<s.length-1||i===s.length-1&&false){h+=esc(seg)}
+    else h+='';
+  }
+  /* build from the flat array: text, base, answer, text, base, answer, ... , text */
+  h='';gi=0;var idx=0;
+  while(idx<s.length){
+    h+=esc(s[idx]);idx++;
+    if(idx<s.length){gaps.push({base:s[idx],ans:s[idx+1],ok:false});h+='<input class="inp inl sg" data-g="'+gi+'" aria-label="Gap '+(gi+1)+'"> <em>('+esc(s[idx])+')</em>';gi++;idx+=2}
+  }
+  $('#stx').innerHTML=h;
+  var att=0;
+  $$('.sg').forEach(function(i){noAssist(i)});
+  $('#sck').onclick=function(){
+    var wrong=0;att++;var hints=[];
+    gaps.forEach(function(g,n){
+      if(g.ok)return;var inp=$('.sg[data-g="'+n+'"]'),typed=norm(inp.value);
+      if(typed===g.ans){g.ok=true;inp.readOnly=true;inp.classList.remove('bad');inp.classList.add('good');win(att===1?2:1)}
+      else{wrong++;
+        if(att>=2){S.log.spell.push({v1:g.base,form:'story gap '+(n+1),typed:typed,ans:g.ans});inp.value=g.ans;inp.readOnly=true;inp.classList.add('good')}
+        else{inp.classList.add('bad');hints.push('Gap '+(n+1)+': '+(typed?letterHint(typed,g.ans):'<span class="lt gap">(empty)</span>'))}}
+    });
+    save();
+    if(!wrong){$('#sf').innerHTML=msg('ok','Perfect story!');$('#sck').disabled=true}
+    else if(att>=2){$('#sf').innerHTML=msg('info','The right words are shown. Read the story again to see each shape.');$('#sck').disabled=true}
+    else{$('#sf').innerHTML=msg('no','Some gaps need a fix. Red gaps are wrong:<div style="margin-top:6px">'+hints.map(function(x){return '<div>'+x+'</div>'}).join('')+'</div>')}
+  };
+}
+
+/* ---------- LEVEL 4: Drop Zone ---------- */
+function L4(){
+  stage.innerHTML='<section class="card"><div class="head">'+mino('S',12)+'<h2>LEVEL 4: DROP ZONE</h2></div>'+
+  '<p>Brain break! A verb piece falls. Is it <b>Shape 2</b> (past) or <b>Shape 3</b> (with have/has)? Tap the right side before it lands.</p>'+
+  '<p class="note">On a keyboard: press <b>2</b> or <b>3</b>, or use the left and right arrows. You have 3 lives.</p>'+
+  '<div class="row"><button class="btn" id="st">START</button></div></section>'+nextCard('SKIP TO LEVEL 5',4);
+  bindGo();$('#st').onclick=startDrop;
+}
+function startDrop(){
+  var lives=3,n=0,total=12,hits=0,cu=null,last=0,speed=34;
+  stage.innerHTML='<section class="card"><div class="head"><span class="lives" id="lv"></span><span class="note" id="cnt"></span></div>'+
+  '<div class="well" id="well" aria-live="polite"></div>'+
+  '<div class="dz-btns"><button class="sbtn s2" id="b2">SHAPE 2<span>past simple</span></button><button class="sbtn s3" id="b3">SHAPE 3<span>have / has + verb</span></button></div>'+
+  '<div id="fb"></div></section>';
+  var well=$('#well');dropRun=true;
+  function hearts(){$('#lv').textContent='♥ '.repeat(lives)+'♡ '.repeat(3-lives);$('#cnt').textContent='Piece '+Math.min(n,total)+' of '+total}
+  var cols=[MCOL.I,MCOL.O,MCOL.T,MCOL.S,MCOL.J,MCOL.L];
+  function spawn(){
+    if(n>=total||lives<=0){end();return}
+    n++;hearts();
+    var t=DROP[Math.floor(Math.random()*DROP.length)],form=Math.random()<.5?2:3;
+    var el=document.createElement('div');el.className='piece blk';el.style.setProperty('--bc',cols[Math.floor(Math.random()*cols.length)]);
+    el.innerHTML='<small>'+esc(t[0])+'</small><b>'+esc(t[form-1])+'</b>';
+    el.style.left=(18+Math.random()*64)+'%';el.style.top='0px';well.appendChild(el);
+    cu={t:t,form:form,y:0,el:el,wrongLogged:false};
+  }
+  function ans(f){
+    if(!cu||!dropRun)return;
+    if(f===cu.form){hits++;win(1);var e=cu.el;e.classList.add('pop');cu=null;$('#fb').innerHTML='';setTimeout(function(){e.remove();spawn()},300)}
+    else{
+      if(!cu.wrongLogged){cu.wrongLogged=true;S.log.shape.push({item:'Drop Zone: '+cu.t[0]+' / '+cu.t[cu.form-1],chose:f,need:cu.form});save()}
+      cu.el.classList.remove('shake');void cu.el.offsetWidth;cu.el.classList.add('shake');
+      $('#fb').innerHTML=msg('no','Not that side. Past time word (yesterday, ago) = Shape 2. Helper (have, has) = Shape 3.');
+    }
+  }
+  function miss(){
+    var e=cu.el,t=cu.t,f=cu.form;lives--;cu=null;e.remove();hearts();
+    S.log.shape.push({item:'Drop Zone missed: '+t[0]+' / '+t[f-1],chose:0,need:f});save();
+    $('#fb').innerHTML=msg('info','Too slow! <b>'+esc(t[f-1])+'</b> is Shape '+f+' of <b>'+esc(t[0])+'</b> ('+esc(t[0])+', '+esc(t[1])+', '+esc(t[2])+').');
+    spawn();
+  }
+  function tick(ts){
+    if(!dropRun)return;
+    if(!last)last=ts;var dt=Math.min(.05,(ts-last)/1000);last=ts;
+    if(cu){cu.y+=speed*dt;cu.el.style.top=cu.y+'px';if(cu.y>well.clientHeight-cu.el.offsetHeight)miss()}
+    raf=requestAnimationFrame(tick);
+  }
+  function end(){
+    dropRun=false;cancelAnimationFrame(raf);
+    stage.innerHTML='<section class="card"><h2>'+(lives>0?'ROUND CLEAR!':'GAME OVER')+'</h2><p class="big" style="margin:14px 0">'+hits+' of '+total+' pieces placed.</p>'+
+    '<div class="row"><button class="btn alt" id="again">PLAY AGAIN</button><button class="btn" data-go="4">NEXT: DESCRIBE IT</button></div></section>';
+    $('#again').onclick=startDrop;bindGo();
+  }
+  $('#b2').onclick=function(){ans(2)};$('#b3').onclick=function(){ans(3)};
+  keyH=function(e){if(e.key==='2'||e.key==='ArrowLeft')ans(2);else if(e.key==='3'||e.key==='ArrowRight')ans(3)};
+  document.addEventListener('keydown',keyH);
+  spawn();raf=requestAnimationFrame(tick);
+}
+
+/* ---------- sentence checker ---------- */
+var ALLW=FACT.map(function(f){return f[1]}).concat(EXTRA_DESC);
+var PAST=(function(){var s={};VERBS.reg.concat(VERBS.irr,DROP).forEach(function(v){s[v[1]]=1});
+  ['was','were','had','did','said','got','made','felt','met','ran','won','sat','read','came','knew','told','found','left','heard','kept','lost','sold','sent','thought','played','visited','watched'].forEach(function(w){s[w]=1});return s})();
+var NOTED=['need','speed','bed','red','feed','seed','weed','indeed','hundred','shed','sled'];
+var SUBJ=['i',"i'm","i'd",'we','he','she','they','it','you','my','our','his','her','their','mum','dad','everyone'];
+function sentCheck(txt,r){
+  var t=txt.trim(),clean=t.replace(/[.,!?;:]/g,' '),toks=clean.split(/\s+/).filter(Boolean),low=toks.map(function(x){return x.toLowerCase().replace(/[‘’`]/g,"'")});
+  var out=[];
+  out.push({ok:/^[A-Z]/.test(t),label:'Starts with a capital letter'});
+  out.push({ok:/[.!?]$/.test(t),label:'Ends with . ! or ?'});
+  out.push({ok:toks.length>=r.min,label:'At least '+r.min+' words ('+toks.length+' now)'});
+  var capMid=toks.some(function(w,i){return i>0&&/^[A-Z][a-z]+$/.test(w)&&!/^(Yesterday|Last|Then|After|Before|On|In|At|But|And|So)$/.test(w)});
+  out.push({ok:low.length>1&&(low.some(function(w){return SUBJ.indexOf(w)>-1})||capMid),label:'Has a subject (I, we, he, my friend...)'});
+  if(r.word)out.push({ok:new RegExp('\\b'+r.word+'\\b','i').test(t),label:'Uses the word "'+r.word+'"'});
+  if(r.notEx)out.push({ok:norm(t).replace(/[.!?]$/,'')!==norm(r.notEx).replace(/[.!?]$/,''),label:'Your own idea (not the example)'});
+  if(r.past)out.push({ok:low.some(function(w){return PAST[w]||(w.length>3&&/ed$/.test(w)&&NOTED.indexOf(w)<0)}),label:'Uses a past verb (Shape 2)'});
+  if(r.vocab)out.push({ok:low.some(function(w){return ALLW.indexOf(w)>-1}),label:'Uses a describing word (amazing, proud, shy...)'});
+  if(r.because)out.push({ok:low.indexOf('because')>-1,label:'Explains with because'});
+  if(r.sents)out.push({ok:(t.match(/[.!?]/g)||[]).length>=r.sents,label:'Writes '+r.sents+' sentences'});
+  return out;
+}
+function lightsHtml(res){return '<ul class="lights">'+res.map(function(x){return '<li class="'+(x.ok?'ok':'')+'"><i></i>'+esc(x.label)+'</li>'}).join('')+'</ul>'}
+
+/* ---------- LEVEL 5: Sentence Factory ---------- */
+function L5(){
+  var QS=[
+    {id:'Q1',q:'Did you have a good weekend? Tell me about it.',r:{min:6,past:true,vocab:true},tip:'Start with: "I had..." or "Last weekend I..."'},
+    {id:'Q2',q:'Tell me about a game you played or a place you visited. How was it? Why?',r:{min:10,past:true,vocab:true,because:true},tip:'Use: "It was ... because ..."'},
+    {id:'Q3',q:'Describe yourself. What are you like?',r:{min:8,past:false,vocab:true,sents:2},tip:'Use: "I am ..." and "I like ..."'}
+  ];
+  stage.innerHTML='<section class="card"><div class="head">'+mino('J',12)+'<h2>LEVEL 5: DESCRIBE IT</h2></div>'+
+  '<p>Learn a word by using it. Write <b>your own sentence</b> for each word card. Do not copy the example! <span class="note" id="fc">0 of '+FACT.length+' done</span></p></section>'+
+  '<div id="fact"></div>'+
+  '<section class="card"><h3>SENTENCE LADDER</h3><p>Answer with a <b>full sentence</b>. Climb all three steps!</p>'+
+  '<div class="ladder"><div class="rung">Step 1: "Yes."</div><div class="rung">Step 2: "Yes, I did."</div><div class="rung">Step 3: "Yes, I liked the film because it was hilarious."</div></div>'+
+  '<div id="qs"></div></section>'+nextCard('NEXT: BOSS MISSION',5);
+  var groups={},order=[];FACT.forEach(function(f){if(!groups[f[0]]){groups[f[0]]=[];order.push(f[0])}groups[f[0]].push(f)});
+  $('#fact').innerHTML=order.map(function(g,gi){return '<h3 style="margin:18px 0 8px">'+esc(g.toUpperCase())+'</h3><div class="words">'+groups[g].map(function(f,i){
+    var id=FACT.indexOf(f);
+    return '<div class="wc" data-f="'+id+'"><div class="wd">'+esc(f[1])+'</div><div class="note">'+esc(f[2])+'</div><div class="note"><em>Example: '+esc(f[3])+'</em></div><textarea class="ta" aria-label="Your sentence with '+esc(f[1])+'" placeholder="Your own sentence..."></textarea><div class="row" style="margin-top:8px"><button class="btn sm">CHECK</button></div><div class="res"></div></div>'}).join('')+'</div>'}).join('');
+  var fdone=0;
+  $$('.wc').forEach(function(card){
+    var f=FACT[+card.dataset.f],ta=$('.ta',card),passed=false;noAssist(ta);
+    if(S.sent['Word: '+f[1]])ta.value=S.sent['Word: '+f[1]];
+    $('.btn',card).onclick=function(){
+      var res=sentCheck(ta.value,{min:5,word:f[1],notEx:f[3]}),ok=res.every(function(x){return x.ok});
+      S.sent['Word: '+f[1]]=ta.value.trim();save();
+      $('.res',card).innerHTML=lightsHtml(res);
+      if(ok&&!passed){passed=true;win(2);fdone++;$('#fc').textContent=fdone+' of '+FACT.length+' done';$('.res',card).insertAdjacentHTML('beforeend',msg('ok','Great sentence!'))}
+    };
+  });
+  $('#qs').innerHTML=QS.map(function(q,qi){return '<div class="qitem" data-q="'+qi+'"><p class="q">'+esc(q.q)+'</p><p class="note">'+esc(q.tip)+'</p>'+
+    '<textarea class="ta" id="t'+qi+'" aria-label="Your answer"></textarea><div class="row" style="margin-top:8px"><button class="btn sm" data-c="'+qi+'">CHECK</button></div><div id="r'+qi+'"></div></div>'}).join('');
+  QS.forEach(function(q,qi){
+    var ta=$('#t'+qi);noAssist(ta);var passed=false;
+    if(S.sent[q.id])ta.value=S.sent[q.id];
+    $('[data-c="'+qi+'"]').onclick=function(){
+      var res=sentCheck(ta.value,q.r),ok=res.every(function(x){return x.ok});
+      S.sent[q.id]=ta.value.trim();save();
+      $('#r'+qi).innerHTML=lightsHtml(res)+msg(ok?'ok':'info',ok?'Step 3 reached! A full sentence with details.':'Fix the grey boxes, then check again.');
+      if(ok&&!passed){passed=true;win(3)}
+    };
+  });
+  bindGo();
+}
+
+/* ---------- LEVEL 6: Boss ---------- */
+function L6(){
+  var A=[
+    ["Look! The cat ___ on my keyboard.",["sleeps","is sleeping","sleep"],1],
+    ["Last year we ___ to Italy.",["went","gone","go"],0],
+    ["He ___ his bike to school yesterday.",["ride","ridden","rode"],2],
+    ["I have ___ this book twice.",["red","read","reed"],1],
+    ["There are three ___ in the garden.",["mouses","mice","mouse"],1],
+    ["This is the ___ game I have ever played.",["goodest","best","better"],1],
+    ["My sister is ___ than me.",["taller","tallest","more tall"],0],
+    ["We met on Monday ___ the park.",["in","at","on"],1]
+  ];
+  var B=[["The film was so ___ that I stopped watching.","BORE","boring"],["That road is very ___ at night.","DANGER","dangerous"],["Mia is always ___. She helps everyone.","HELP","helpful"],["Money is not the same as ___.","HAPPY","happiness"]];
+  var Cs=[
+    ["A","He does his homework every evening."],["B","At first, the pieces fell slowly and he stacked them carefully."],["C","They arrived at six o'clock and walked inside."],
+    ["D","The machines will be new next year."],["E","After that, they looked for something different."],["F","It was the best Friday of the month."],["G","Everyone clapped when his score appeared on the screen."]
+  ];
+  var CA=['C','E','B','G','F'];
+  var D=[
+    {ro:"Ieri am mâncat o pizza cu prietenii mei.",keys:[["yesterday"],["ate"],["pizza"],["friends"]],model:"Yesterday I ate a pizza with my friends."},
+    {ro:"Ea a scris o poveste despre un dragon acum două zile.",keys:[["wrote"],["story"],["dragon"],["two days ago"]],model:"She wrote a story about a dragon two days ago."},
+    {ro:"Fratele meu nu a înțeles lecția.",keys:[["brother"],["didn't understand","did not understand"],["lesson"]],model:"My brother didn't understand the lesson."},
+    {ro:"Noi am mers la parc și am văzut un câine mare.",keys:[["went"],["park"],["saw"],["big dog","large dog"]],model:"We went to the park and we saw a big dog."}
+  ];
+  stage.innerHTML='<section class="card"><div class="head">'+mino('Z',12)+'<h2>LEVEL 6: BOSS MISSION</h2></div>'+
+  '<p>This looks like the English Olympiad paper: choose the right form, build words, read, translate and write. Take your time. Spell every word yourself.</p></section>'+
+  '<section class="card" id="pA"><h3>PART A: CHOOSE THE CORRECT FORM</h3><div id="aq"></div><div class="row"><button class="btn" id="cA">CHECK PART A</button></div><div id="rA"></div></section>'+
+  '<section class="card" id="pB"><h3>PART B: BUILD A NEW WORD</h3><p class="note">Use the word in capitals to make a word that fits the gap.</p><div id="bq"></div><div class="row"><button class="btn" id="cB">CHECK PART B</button></div><div id="rB"></div></section>'+
+  '<section class="card" id="pC"><h3>PART C: READING</h3><p class="note">Five sentences were removed from the text. Choose the correct sentence (A to G) for each gap. Two sentences are extra.</p>'+
+  '<div class="gapped sl" id="txt"></div><div class="sl" style="margin-top:10px">'+Cs.map(function(c){return '<p style="margin:6px 0"><b>'+c[0]+')</b> '+esc(c[1])+'</p>'}).join('')+'</div>'+
+  '<div class="row"><button class="btn" id="cC">CHECK PART C</button></div><div id="rC"></div></section>'+
+  '<section class="card" id="pD"><h3>PART D: TRANSLATE INTO ENGLISH</h3><div id="dq"></div><div class="row"><button class="btn" id="cD">CHECK PART D</button></div><div id="rD"></div></section>'+
+  '<section class="card" id="pE"><h3>PART E: WRITING</h3><p class="q">Write about your best day last week. Write 50 to 80 words.</p>'+
+  '<p class="note">Use: <b>in the morning</b>, <b>after school</b>, <b>because</b>, <b>without</b>, and at least 3 irregular past verbs (went, ate, saw...).</p>'+
+  '<textarea class="ta" id="wr" style="min-height:200px" aria-label="Your writing"></textarea><p class="note" id="wc">0 words</p><div id="wl"></div>'+
+  '<div class="row"><button class="btn" id="cE">HAND IN WRITING</button></div><div id="rE"></div></section>'+
+  nextCard('NEXT: SPEAKING',6);
+  $('#aq').innerHTML=A.map(function(a,qi){return '<div class="qitem" data-q="'+qi+'"><div>'+(qi+1)+'. '+esc(a[0]).replace('___','<b>_____</b>')+'</div><div class="opts">'+a[1].map(function(o,oi){return '<button class="opt" data-o="'+oi+'">'+esc(o)+'</button>'}).join('')+'</div></div>'}).join('');
+  var selA={};
+  $$('#aq .qitem').forEach(function(box){var qi=+box.dataset.q;$$('.opt',box).forEach(function(b){b.onclick=function(){if($('#cA').disabled)return;selA[qi]=+b.dataset.o;$$('.opt',box).forEach(function(x){x.classList.remove('sel')});b.classList.add('sel')}})});
+  $('#cA').onclick=function(){
+    var ok=0;
+    A.forEach(function(a,qi){var box=$('#aq [data-q="'+qi+'"]'),opts=$$('.opt',box);
+      opts[a[2]].classList.add('right');
+      if(selA[qi]===a[2]){ok++;win(1)}else{if(selA[qi]!==undefined)opts[selA[qi]].classList.add('wrong');S.log.mc.push({item:'Boss A: '+a[0],typed:selA[qi]!==undefined?a[1][selA[qi]]:'(no answer)',ans:a[1][a[2]]})}});
+    $('#cA').disabled=true;S.boss.A=ok;save();$('#rA').innerHTML=msg(ok>=7?'ok':'info','Part A: '+ok+' of '+A.length+'. Green is the right answer.');
+  };
+  $('#bq').innerHTML=B.map(function(b,qi){return '<div class="qitem"><div>'+(qi+1)+'. '+esc(b[0]).replace('___','<b>_____</b>')+' <b>('+esc(b[1])+')</b></div><input class="inp" id="b'+qi+'" aria-label="Answer '+(qi+1)+'"><div id="bh'+qi+'" class="hint"></div></div>'}).join('');
+  B.forEach(function(b,qi){noAssist($('#b'+qi))});
+  $('#cB').onclick=function(){
+    var ok=0;
+    B.forEach(function(b,qi){var inp=$('#b'+qi),typed=norm(inp.value);
+      if(typed===b[2]){ok++;win(2);inp.classList.add('good')}
+      else{inp.classList.add('bad');S.log.spell.push({v1:b[1],form:'word formation',typed:typed,ans:b[2]});$('#bh'+qi).innerHTML=letterHint(typed,b[2])}});
+    $('#cB').disabled=true;S.boss.B=ok;save();$('#rB').innerHTML=msg(ok===B.length?'ok':'info','Part B: '+ok+' of '+B.length+'. Green and red letters show your spelling.');
+  };
+  var opts='<option value="">?</option>'+Cs.map(function(c){return '<option value="'+c[0]+'">'+c[0]+'</option>'}).join('');
+  function g(n){return '<select class="inp" id="g'+n+'" aria-label="Gap '+n+'">'+opts+'</select>'}
+  $('#txt').innerHTML='<p><b>A Night at the Arcade</b></p>'+
+   '<p>Last Friday, Leo went to the arcade with his cousin. (1) '+g(1)+' The room was full of lights and music. They played racing games for an hour. (2) '+g(2)+' Leo wanted to try the old Tetris machine in the corner. (3) '+g(3)+' After ten minutes, he reached level seven, and a small crowd stood behind him. (4) '+g(4)+' He felt proud and a little nervous. In the end, Leo lost the game, but he won a free drink. (5) '+g(5)+' He wanted to go back the next weekend.</p>';
+  $('#cC').onclick=function(){
+    var ok=0;CA.forEach(function(a,n){var s=$('#g'+(n+1));
+      if(s.value===a){ok++;win(2);s.classList.add('good')}else{s.classList.add('bad');S.log.mc.push({item:'Boss C gap '+(n+1),typed:s.value||'(no answer)',ans:a})}});
+    $('#cC').disabled=true;S.boss.C=ok;save();
+    $('#rC').innerHTML=msg(ok===5?'ok':'info','Part C: '+ok+' of 5. Answers: 1 '+CA[0]+', 2 '+CA[1]+', 3 '+CA[2]+', 4 '+CA[3]+', 5 '+CA[4]+'. Clue words like "After that", "At first" and "It was" help you decide.');
+  };
+  $('#dq').innerHTML=D.map(function(d,qi){return '<div class="qitem"><p style="margin:4px 0"><b>'+(qi+1)+'.</b> '+esc(d.ro)+'</p><textarea class="ta" id="d'+qi+'" style="min-height:70px" aria-label="Translation '+(qi+1)+'"></textarea><div id="dh'+qi+'"></div></div>'}).join('');
+  D.forEach(function(d,qi){noAssist($('#d'+qi))});
+  $('#cD').onclick=function(){
+    var tot=0;
+    D.forEach(function(d,qi){var txt=norm($('#d'+qi).value).replace(/[.,!?]/g,'');
+      var found=d.keys.filter(function(alts){return alts.some(function(a){return txt.indexOf(a)>-1})}).length;
+      if(found===d.keys.length){tot++;win(2)}
+      S.sent['Translation '+(qi+1)]=$('#d'+qi).value.trim();
+      $('#dh'+qi).innerHTML=msg(found===d.keys.length?'ok':'info','Key ideas found: '+found+' of '+d.keys.length+'. Model: <b>'+esc(d.model)+'</b>')});
+    $('#cD').disabled=true;S.boss.D=tot;save();$('#rD').innerHTML=msg('info','Your teacher will read your sentences too. Check the verb shape and the spelling against the model.');
+  };
+  var wr=$('#wr');noAssist(wr);if(S.sent['Boss writing'])wr.value=S.sent['Boss writing'];
+  function wcheck(){
+    var t=wr.value,low=t.toLowerCase(),toks=t.trim().split(/\s+/).filter(Boolean);
+    var cnt=toks.filter(function(w){var c=w.toLowerCase().replace(/[^a-z]/g,'');return PAST[c]&&!/ed$/.test(c)}).length;
+    $('#wc').textContent=toks.length+' words (goal: 50 to 80)';
+    var res=[{ok:toks.length>=50,label:'50 words or more'},{ok:low.indexOf('in the morning')>-1,label:'in the morning'},{ok:low.indexOf('after school')>-1,label:'after school'},{ok:/\bbecause\b/.test(low),label:'because'},{ok:/\bwithout\b/.test(low),label:'without'},{ok:cnt>=3,label:'3 irregular past verbs ('+cnt+' found)'}];
+    $('#wl').innerHTML=lightsHtml(res);return res;
+  }
+  wr.addEventListener('input',wcheck);wcheck();
+  $('#cE').onclick=function(){
+    var res=wcheck(),toks=wr.value.trim().split(/\s+/).filter(Boolean);
+    if(toks.length<30){$('#rE').innerHTML=msg('info','Write a little more first. Try to reach 50 words.');return}
+    S.sent['Boss writing']=wr.value.trim();var ok=res.every(function(x){return x.ok});win(ok?4:2);S.boss.E=ok;save();
+    $('#cE').disabled=true;
+    $('#rE').innerHTML=msg('ok','Handed in! Before you relax, read it once more. Check: <b>capital letters</b>, <b>full stops</b>, <b>spelling</b>, and <b>Shape 2</b> for finished events.');
+  };
+  bindGo();
+}
+
+/* ---------- LEVEL 7: Speaking ---------- */
+function L7(){
+  var ti=0;
+  stage.innerHTML='<section class="card"><div class="head">'+mino('T',12)+'<h2>LEVEL 7: SPEAKING TICKET</h2></div>'+
+  '<p>Olympiad speaking works with <b>tickets</b>: pictures to describe, then questions. Pick a ticket. You get <b>1 minute to think</b>, then <b>90 seconds to speak</b>. Say <b>full sentences</b>, not one-word answers!</p><div class="chips" id="tk"></div></section>'+
+  '<section class="card" id="tkc"></section>'+
+  '<section class="card"><h3>REAL SPEAKING TICKETS</h3><p class="note">These are official county-stage tickets from higher grades, so use them to see the style, not as a test for you yet.</p><div class="links">'+
+  '<a href="https://www.edupedu.ro/bilete-olimpiada-de-limba-engleza-2024-etapa-judeteana-subiectele-de-la-proba-orala-pentru-clasa-a-ix-a-normal-si-bilingv-sau-intensiv-descarca/" target="_blank" rel="noopener">Edupedu: ONLE 2024 speaking tickets, grade 9<span>Opens in a new tab. Pictures plus three tasks per ticket.</span></a>'+
+  '<a href="https://cdn.edupedu.ro/wp-content/uploads/2024/03/OJ_9_A_engleza_2024_oral.pdf" target="_blank" rel="noopener">Speaking tickets PDF, grade 9, normal programme<span>Opens the document in a new tab.</span></a></div></section>'+nextCard('NEXT: LISTENING',7);
+  $('#tk').innerHTML=TICKETS.map(function(t,i){return '<button class="chip" data-t="'+i+'" aria-pressed="'+(i===0)+'">Ticket '+(i+1)+'</button>'}).join('');
+  $$('#tk .chip').forEach(function(c){c.onclick=function(){ti=+c.dataset.t;$$('#tk .chip').forEach(function(x){x.setAttribute('aria-pressed',String(x===c))});draw()}});
+  function draw(){
+    clearInterval(timer);var T=TICKETS[ti],sv=S.speak[ti]||{};
+    $('#tkc').innerHTML='<h3>'+esc(T.title)+'</h3>'+
+    '<div class="pics" style="margin-top:12px"><div class="pic" role="img" aria-label="'+esc(T.a[1])+'">'+T.a[0]+'<small>PICTURE A</small></div><div class="pic" role="img" aria-label="'+esc(T.b[1])+'">'+T.b[0]+'<small>PICTURE B</small></div></div>'+
+    '<ol style="margin:14px 0;padding-left:22px">'+T.tasks.map(function(t){return '<li style="margin:8px 0;font-weight:600">'+esc(t)+'</li>'}).join('')+'</ol>'+
+    '<div class="mini" style="--bc:var(--c3)"><h3>HELP BOX</h3><p>In picture A I can see...<br>The boy is ...ing.<br>In my opinion... because...<br>Last weekend I... (use Shape 2!)<br>It was ... (amazing, boring, crowded...)</p></div>'+
+    '<div class="row"><span class="timer" id="tm">--</span><button class="btn" id="tgo">START THINKING (60 s)</button></div><div id="tmsg"></div>'+
+    '<h3 style="margin-top:20px">TEACHER SCORES (1 to 5)</h3><div class="rate">'+['Full sentences','Grammar and verb shapes','Vocabulary','Pronunciation and fluency'].map(function(c,i){return '<div><label for="r'+i+'">'+c+'</label><select id="r'+i+'"><option value="">-</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(sv[c]===n?' selected':'')+'>'+n+'</option>'}).join('')+'</select></div>'}).join('')+'</div>'+
+    '<div class="row"><button class="btn alt sm" id="rsv">SAVE SCORES</button><span class="note" id="rsm"></span></div>';
+    $('#tgo').onclick=function(){
+      var phase=0,left=60;clearInterval(timer);$('#tgo').disabled=true;
+      $('#tm').textContent='THINK 60';$('#tmsg').innerHTML=msg('info','Think. Plan what you will say. Make notes in your head.');
+      timer=setInterval(function(){
+        left--;
+        if(left<=0){
+          if(phase===0){phase=1;left=90;toast('SPEAK NOW!','info');$('#tmsg').innerHTML=msg('ok','Speak now! Use full sentences and add reasons with because.')}
+          else{clearInterval(timer);timer=0;$('#tm').textContent='TIME!';$('#tmsg').innerHTML=msg('info','Time is up. Well done! Your teacher can score you below.');$('#tgo').disabled=false;$('#tgo').textContent='TRY AGAIN';win(3);return}
+        }
+        $('#tm').textContent=(phase===0?'THINK ':'SPEAK ')+left;
+      },1000);
+    };
+    $('#rsv').onclick=function(){
+      var o={};['Full sentences','Grammar and verb shapes','Vocabulary','Pronunciation and fluency'].forEach(function(c,i){var v=+$('#r'+i).value;if(v)o[c]=v});
+      S.speak[ti]=o;save();$('#rsm').textContent='Saved.';
+    };
+  }
+  draw();bindGo();
+}
+
+/* ---------- LEVEL 8: Listening ---------- */
+function speakText(text,rate){
+  try{
+    var ss=window.speechSynthesis;if(!ss||typeof SpeechSynthesisUtterance==='undefined')return false;
+    ss.cancel();var u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=rate;
+    var vs=ss.getVoices(),v=null;for(var i=0;i<vs.length;i++){if(/en-GB/i.test(vs[i].lang)){v=vs[i];break}}
+    if(!v)for(var j=0;j<vs.length;j++){if(/^en/i.test(vs[j].lang)){v=vs[j];break}}
+    if(v)u.voice=v;ss.speak(u);return true;
+  }catch(e){return false}
+}
+function L8(){
+  var plays=0;
+  stage.innerHTML='<section class="card"><div class="head">'+mino('L',12)+'<h2>LEVEL 8: LISTENING</h2></div>'+
+  '<p>Listen to a short story about a weekend. You can listen <b>two times</b>. Then answer the questions.</p>'+
+  '<div class="row"><button class="btn" id="pl">▶ PLAY</button><button class="btn alt" id="sl">PLAY SLOWER</button><button class="btn alt" id="sp">STOP</button><span class="note" id="pc">Played 0 times</span></div>'+
+  '<div id="pm"></div></section>'+
+  '<section class="card"><h3>PART 1: CHOOSE THE ANSWER</h3><div id="lq"></div><div class="row"><button class="btn" id="lc">CHECK PART 1</button></div><div id="lr"></div></section>'+
+  '<section class="card"><h3>PART 2: WRITE THE MISSING WORDS</h3><p class="note">Listen again. Write the verb you hear. Spell it yourself!</p><div class="sl story" id="lg"></div><div class="row"><button class="btn" id="lgc">CHECK PART 2</button></div><div id="lgr"></div></section>'+
+  '<section class="card"><h3>REAL LISTENING PRACTICE</h3><p class="note">The voice above is a computer voice. For real exam style audio, try these (they open in a new tab).</p><div class="links">'+
+  '<a href="https://learnenglishteens.britishcouncil.org/skills/listening/a2-listening" target="_blank" rel="noopener">British Council LearnEnglish Teens: A2 listening<span>Short audio and tasks at the right level for Theo.</span></a>'+
+  '<a href="https://www.cambridgeenglish.org/Images/423014-cambridge-english-young-learners-sample-papers-2018-volume-2.pdf" target="_blank" rel="noopener">Cambridge Young Learners sample papers (Flyers, A2)<span>Official sample papers with a listening part. Check the Cambridge site for the audio files.</span></a></div></section>'+nextCard('SEE MY RESULTS',8);
+  function play(r){
+    if(plays>=2){$('#pm').innerHTML=msg('info','You listened two times. Now answer from what you remember.');return}
+    var ok=speakText(LSCRIPT,r);
+    if(!ok){$('#pm').innerHTML=msg('info','This device has no voice. Ask your teacher to read the story aloud.');return}
+    plays++;$('#pc').textContent='Played '+plays+' time'+(plays>1?'s':'');$('#pm').innerHTML='';
+  }
+  $('#pl').onclick=function(){play(0.92)};$('#sl').onclick=function(){play(0.75)};
+  $('#sp').onclick=function(){try{window.speechSynthesis.cancel()}catch(e){}};
+  $('#lq').innerHTML=LMC.map(function(q,qi){return '<div class="qitem" data-q="'+qi+'"><div>'+(qi+1)+'. '+esc(q[0])+'</div><div class="opts">'+q[1].map(function(o,oi){return '<button class="opt" data-o="'+oi+'">'+esc(o)+'</button>'}).join('')+'</div></div>'}).join('');
+  var sel={};
+  $$('#lq .qitem').forEach(function(box){var qi=+box.dataset.q;$$('.opt',box).forEach(function(b){b.onclick=function(){if($('#lc').disabled)return;sel[qi]=+b.dataset.o;$$('.opt',box).forEach(function(x){x.classList.remove('sel')});b.classList.add('sel')}})});
+  $('#lc').onclick=function(){
+    var ok=0;
+    LMC.forEach(function(q,qi){var box=$('#lq [data-q="'+qi+'"]'),o=$$('.opt',box);o[q[2]].classList.add('right');
+      if(sel[qi]===q[2]){ok++;win(1)}else{if(sel[qi]!==undefined)o[sel[qi]].classList.add('wrong');S.log.mc.push({item:'Listening: '+q[0],typed:sel[qi]!==undefined?q[1][sel[qi]]:'(no answer)',ans:q[1][q[2]]})}});
+    $('#lc').disabled=true;S.listen.mc=ok;save();
+    $('#lr').innerHTML=msg(ok>=4?'ok':'info','Part 1: '+ok+' of '+LMC.length+'. Numbers like forty and fourteen sound similar, so listen to the stress!')+'<div class="row"><button class="btn alt sm" id="scr">SHOW THE SCRIPT</button></div><div id="sc"></div>';
+    $('#scr').onclick=function(){$('#sc').innerHTML='<div class="sl" style="margin-top:10px">'+esc(LSCRIPT)+'</div>'};
+  };
+  var gaps=[],h='';
+  LGAP.forEach(function(row,ri){h+='<p style="margin:6px 0">';row.forEach(function(p,pi){if(pi%2===0)h+=esc(p)+' ';else{h+='<input class="inp inl lg" data-g="'+gaps.length+'" aria-label="Missing word '+(gaps.length+1)+'"> ';gaps.push(p)}});h+='</p>'});
+  $('#lg').innerHTML=h;$$('.lg').forEach(noAssist);
+  $('#lgc').onclick=function(){
+    var ok=0,hs=[];
+    gaps.forEach(function(a,n){var inp=$('.lg[data-g="'+n+'"]'),typed=norm(inp.value);
+      if(typed===a){ok++;win(2);inp.classList.add('good');inp.readOnly=true}
+      else{inp.classList.add('bad');S.log.spell.push({v1:a,form:'listening gap',typed:typed,ans:a});hs.push(typed?letterHint(typed,a):'(empty)')}});
+    $('#lgc').disabled=true;S.listen.gap=ok;save();
+    $('#lgr').innerHTML=msg(ok===gaps.length?'ok':'info','Part 2: '+ok+' of '+gaps.length+'.'+(ok<gaps.length?' Correct words: '+gaps.join(', ')+'.':''));
+  };
+  bindGo();
+}
+
+/* ---------- report + LEVEL 9 ---------- */
+function report(){
+  var L=S.log,o=[];
+  o.push('VERB BLOCKS report for '+(S.name||'student')+' ('+new Date().toLocaleDateString('en-GB')+')');
+  o.push('Score '+S.score+', lines cleared '+S.lines);
+  o.push('Boss parts: A '+(S.boss.A!==undefined?S.boss.A+'/8':'not done')+', B '+(S.boss.B!==undefined?S.boss.B+'/4':'not done')+', C '+(S.boss.C!==undefined?S.boss.C+'/5':'not done')+', D '+(S.boss.D!==undefined?S.boss.D+'/4 (teacher to review)':'not done')+', E '+(S.boss.E===undefined?'not done':(S.boss.E?'all requirements met':'some requirements missing')));
+  o.push('Listening: part 1 '+(S.listen.mc!==undefined?S.listen.mc+'/5':'not done')+', part 2 '+(S.listen.gap!==undefined?S.listen.gap+'/4':'not done'));
+  var sk=Object.keys(S.speak);
+  o.push('Speaking scores: '+(sk.length?sk.map(function(k){var v=S.speak[k];return 'ticket '+(+k+1)+' ('+Object.keys(v).map(function(c){return c+' '+v[c]}).join(', ')+')'}).join('; '):'not scored'));
+  o.push('');o.push('SPELLING (typed vs correct), '+L.spell.length+' item(s):');
+  L.spell.length?L.spell.forEach(function(e){o.push('- '+e.v1+' ['+e.form+']: wrote "'+e.typed+'", correct "'+e.ans+'"')}):o.push('- none');
+  o.push('');o.push('WRONG SHAPE CHOICES, '+L.shape.length+' time(s):');
+  L.shape.length?L.shape.forEach(function(e){o.push('- '+e.item+(e.chose?' (chose '+e.chose+', needed '+e.need+')':' (needed shape '+e.need+')'))}):o.push('- none');
+  o.push('');o.push('OTHER MULTIPLE CHOICE MISTAKES, '+L.mc.length+':');
+  L.mc.length?L.mc.forEach(function(e){o.push('- '+e.item+' | chose "'+e.typed+'", correct "'+e.ans+'"')}):o.push('- none');
+  o.push('');o.push('SENTENCES AND WRITING:');
+  var k=Object.keys(S.sent);k.length?k.forEach(function(x){if(S.sent[x])o.push(x+': '+S.sent[x])}):o.push('- none yet');
+  return o.join('\n');
+}
+function copyBox(id,btn){
+  var ta=$(id);
+  btn.onclick=function(){
+    function fb(){ta.focus();ta.select();toast('SELECTED. COPY IT NOW','info')}
+    try{navigator.clipboard.writeText(ta.value).then(function(){toast('COPIED!')},fb)}catch(e){fb()}
+  };
+}
+function L9(){
+  var errs=S.log.spell.length+S.log.shape.length+S.log.mc.length,st=errs<=8?3:errs<=22?2:1;
+  var counts={};S.log.spell.forEach(function(e){counts[e.v1]=(counts[e.v1]||0)+1});
+  var top=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a]}).slice(0,3);
+  stage.innerHTML='<section class="card"><div class="head">'+mino('I',12)+'<h2>RESULTS</h2></div>'+
+  '<p class="stars" aria-label="'+st+' stars">'+'★'.repeat(st)+'☆'.repeat(3-st)+'</p>'+
+  '<p class="big" style="margin:10px 0">'+esc(S.name||'Player')+': '+S.score+' points, '+S.lines+' lines.</p>'+
+  '<h3 style="margin-top:14px">MY NEXT GOALS</h3><ul><li>'+(top.length?'Practise the spelling of: <b>'+top.map(esc).join(', ')+'</b>.':'Your spelling was strong. Keep it up!')+'</li>'+
+  '<li>Answer in full sentences: subject + verb + one extra detail.</li><li>Use Shape 2 for finished past, and Shape 3 after have or has.</li></ul>'+
+  '<div class="row"><button class="btn alt" data-go="1">PRACTISE MORE</button></div></section>'+
+  '<section class="card"><h3>SHOW THIS TO YOUR TEACHER</h3><textarea class="rep" id="rp" readonly aria-label="Report"></textarea><div class="row"><button class="btn" id="cp">COPY REPORT</button></div></section>';
+  $('#rp').value=report();copyBox('#rp',$('#cp'));bindGo();
+}
+
+/* ---------- teacher panel ---------- */
+function teacher(){
+  var h='<aside class="teacher"><h3>LESSON FLOW (about 60 minutes, adjust freely)</h3><ul>'+
+  '<li>Levels 1 and 2 (20 min): the games warm up the three shapes. In the Builder, watch the green and red letters to see where spelling breaks.</li>'+
+  '<li>Level 3 (15 min): three exercises on one page: pick the shape and write, spot the mistake, story gaps.</li>'+
+  '<li>Level 4 (5 min): Drop Zone as a brain break.</li>'+
+  '<li>Level 5 (15 min): he writes his own sentence for each word card. Say "full sentence, please" whenever he answers with yes or no.</li>'+
+  '<li>Level 6: Olympiad style tasks. Parts A to C fit in class, writing can be homework.</li>'+
+  '<li>Levels 7 and 8 (10 min): speaking ticket with you as the examiner, then listening.</li></ul>'+
+  '<h3>SPEAKING: HOW TO RUN A TICKET</h3><ul><li>Let him press START THINKING, then listen without helping for the 90 seconds.</li>'+
+  '<li>Aim for 5 to 6 full sentences per task. If he stops, ask "Can you say more? Why?"</li>'+
+  '<li>Score the four criteria at the bottom of the ticket. Scores go into the report.</li>'+
+  '<li>If he answers with one word, ask "Can you say that in a full sentence?" and offer a starter: "I think...", "Yesterday I...", "It was ... because...".</li></ul>'+
+  '<h3>LISTENING SCRIPT (read aloud if the computer voice does not work)</h3><div class="sl">'+esc(LSCRIPT)+'</div>'+
+  '<h3>OLYMPIAD FORMAT (grade 6, local stage, Dâmbovița, February 2026)</h3><ul>'+
+  '<li>90 minutes. Use of English 30 points: word formation, choose the correct form, gap fill from a word list, and Romanian sentences to translate.</li>'+
+  '<li>Reading 30 points: a text with 5 removed sentences and 3 extra ones.</li>'+
+  '<li>Writing 30 points: a short essay with required words. Marking covers content, organisation, vocabulary and spelling, structures and punctuation, register.</li>'+
+  '<li>Formats can change from county to county and year to year. Source: <a href="https://www.edupedu.ro/subiecte-si-bareme-olimpiada-de-limba-engleza-2026-descarca-cerintele-primite-de-elevi-la-etapa-locala-din-dambovita-clasele-v-xii/" target="_blank" rel="noopener">Edupedu, ONLE 2026 local stage papers</a>.</li></ul>'+
+  '<h3>EDIT THE LISTS</h3><p class="note">The verb lists (VERBS, ITEMS, CH, SP, STORY, DROP, FACT) sit at the top of the script. Replace them with the exact verbs you covered.</p>'+
+  '<h3>LIVE REPORT</h3><textarea class="rep" id="trp" readonly aria-label="Live report"></textarea><div class="row"><button class="btn" id="tcp">COPY REPORT</button><button class="btn alt" id="rst">RESET GAME</button></div><div id="rsm"></div></aside>';
+  $('#tpanel').innerHTML=h;$('#trp').value=report();copyBox('#trp',$('#tcp'));
+  $('#rst').onclick=function(){
+    $('#rsm').innerHTML=msg('no','This clears score and answers on this device. <button class="btn alt sm" id="rok" style="margin-left:8px">YES, RESET</button>');
+    $('#rok').onclick=function(){S=fresh();save();hud();$('#tpanel').hidden=true;$('#tbtn').setAttribute('aria-expanded','false');start()};
+  };
+}
+$('#tbtn').onclick=function(){
+  var p=$('#tpanel'),open=p.hidden;
+  if(open){teacher();p.hidden=false}else{p.hidden=true}
+  this.setAttribute('aria-expanded',String(open));
+};
+
+hud();start();
+})();
+</script>
+
+</body></html>
